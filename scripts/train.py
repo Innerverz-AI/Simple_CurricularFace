@@ -15,14 +15,11 @@ from backbone.model_irse import IR_50, IR_101, IR_152, IR_SE_50, IR_SE_101, IR_S
 from head.metrics import ArcFace, CurricularFace
 from util.utils import separate_irse_bn_paras, separate_resnet_bn_paras, get_time, AverageMeter, accuracy
 from dataset.datasets import FaceDataset
-from tensorboardX import SummaryWriter
 from tqdm import tqdm
 import os
 import sys
 import time
-import numpy as np
-import scipy
-import pickle
+import wandb
 
 def adjust_learning_rate(optimizer, epoch, cfg):
     """Decay the learning rate based on schedule"""
@@ -50,6 +47,8 @@ def main_worker(gpu, ngpus_per_node, cfg):
             pass
         builtins.print = print_pass
     cfg['RANK'] = cfg['RANK'] * ngpus_per_node + gpu
+    if cfg['RANK'] == 0:
+        wandb.init(project=cfg['HEAD_NAME'], name=cfg['RUN_ID'])
     dist.init_process_group(backend=cfg['DIST_BACKEND'], init_method = cfg["DIST_URL"], world_size=cfg['WORLD_SIZE'], rank=cfg['RANK'])
     
     # Data loading code
@@ -155,18 +154,20 @@ def main_worker(gpu, ngpus_per_node, cfg):
     MODEL_ROOT = cfg['MODEL_ROOT'] # the root to buffer your checkpoints
     LOG_ROOT = cfg['LOG_ROOT'] # the root to log your train/val status
     STAGES = cfg['STAGES'] # epoch stages to decay learning rate
-    if not os.path.exists(MODEL_ROOT):
-        os.makedirs(MODEL_ROOT)
-    if not os.path.exists(LOG_ROOT):
-        os.makedirs(LOG_ROOT)
-    writer = SummaryWriter(LOG_ROOT) # writer for buffering intermedium results
+    
+    if cfg['RANK'] % ngpus_per_node == 0:
+        if not os.path.exists(MODEL_ROOT):
+            os.makedirs(MODEL_ROOT)
+        if not os.path.exists(LOG_ROOT):
+            os.makedirs(LOG_ROOT)
+        
     # train
     for epoch in range(cfg['START_EPOCH'], cfg['NUM_EPOCH']):
         train_sampler.set_epoch(epoch)
         adjust_learning_rate(optimizer, epoch, cfg)
 
         #train for one epoch
-        train(train_loader, backbone, head, loss, optimizer, epoch, cfg, writer)
+        train(train_loader, backbone, head, loss, optimizer, epoch, cfg)
         print("=" * 60)
         print("Save Checkpoint...")
         if cfg['RANK'] % ngpus_per_node == 0:
@@ -176,7 +177,7 @@ def main_worker(gpu, ngpus_per_node, cfg):
                          'OPTIMIZER': optimizer.state_dict()}
             torch.save(save_dict, os.path.join(MODEL_ROOT, "Head_{}_Epoch_{}_Time_{}_checkpoint.pth".format(HEAD_NAME, epoch + 1, get_time())))
  
-def train(train_loader, backbone, head, criterion, optimizer, epoch, cfg, writer):
+def train(train_loader, backbone, head, criterion, optimizer, epoch, cfg):
     DISP_FREQ = 100  # 100 batch
     batch = 0  # batch index
     backbone.train()  # set to training mode
@@ -229,10 +230,12 @@ def train(train_loader, backbone, head, criterion, optimizer, epoch, cfg, writer
     sys.stdout.flush()
     print("=" * 60)
     if cfg['RANK'] == 0:
-        writer.add_scalar("Training_Loss", epoch_loss, epoch + 1)
-        writer.add_scalar("Training_Accuracy", epoch_acc, epoch + 1)
-        writer.add_scalar("Top1", top1.avg, epoch+1)
-        writer.add_scalar("Top5", top5.avg, epoch+1)
+        logs = {}
+        logs["Training_Loss"] = epoch_loss
+        logs["Training_Accuracy"] = epoch_acc
+        logs["Top1"] = top1.avg
+        logs["Top5"] = top5.avg
+        wandb.log(logs)
 
 if __name__ == '__main__':
     main()

@@ -1,45 +1,65 @@
-## CurricularFace: Adaptive Curriculum Learning Loss for Deep Face Recognition
-Yuge Huang, Yuhan Wang, Ying Tai, Xiaoming Liu, Pengcheng Shen, Shaoxin Li, Jilin Li, Feiyue Huang
+# Simple CurricularFace 
+This repository is a simplified version of the [official PyTorch implementation of CurricularFace](https://github.com/HuangYG123/CurricularFace).  
+This will be useful for those who want to train the model on a custom dataset or with the specific option.  
 
-This repository is the official PyTorch implementation of paper [CurricularFace: Adaptive Curriculum Learning Loss for Deep Face Recognition](https://arxiv.org/abs/2004.00288). (The work has been accepted by [CVPR2020](http://cvpr2020.thecvf.com/)).
+- Kang Dong Won & Won Bin
+<p align="center"><img src="assets/grids/grid_KDWB_192_IR101_ori.jpg" ></p>
 
-We have released a training framework for face recognition, please refer to the details at [TFace](https://github.com/Tencent/TFace/).
+- Kim Suk Jin & Min Yun Ki
+<p align="center"><img src="assets/grids/grid_JINSUGA_192_IR101_ori.jpg" ></p>
 
-## Main requirements
-
-  * **torch == 1.1.0**
-  * **torchvision == 0.3.0**
-  * **tensorboardX == 1.7**
-  * **bcolz == 1.2.1**
-  * **Python 3**
-  
-## Usage
-```bash
-# To train the model:
-sh train.sh
-# To evaluate the model:
-(1)please first download the val data in https://github.com/ZhaoJ9014/face.evoLVe.PyTorch.
-(2)set the checkpoint dir in config.py
-sh evaluate.sh
+# Usage
+## test
+1. download checkpoint from [here](https://github.com/HuangYG123/CurricularFace)
+2. simple test
 ```
-You can change the experimental setting by simply modifying the parameter in the config.py
+python scripts/test.py
+```
 
-## Model
-The IR101 pretrained model can be downloaded here. 
-[Baidu Cloud](link: https://pan.baidu.com/s/1bu-uocgSyFHf5pOPShhTyA 
-passwd: 5qa0), 
-[Google Drive](https://drive.google.com/open?id=1upOyrPzZ5OI3p6WkA5D5JFYCeiZuaPcp)
+3. make a grid
+```
+python scripts/grid.py
+```
 
-## Result
-The results of the released pretrained model are as follows:
-|Data| LFW | CFP-FP | CPLFW | AGEDB | CALFW | IJBB (TPR@FAR=1e-4) | IJBC (TPR@FAR=1e-4) |
-|:---:|:----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
-| Result | 99.80 | 98.36 | 93.13 | 98.37 | 96.05 | 94.86 | 96.15 ||
+## Dataset
+1. Download **MS-Celeb-1M-Align_112x112 (85K ids/5.8M imgs)** from [here](https://github.com/ZhaoJ9014/face.evoLVe#data-zoo)
+2. unzip the zip file and make a lst file.
+```
+python im2rec.py --list --resize 112 --recursive {prefix} {path_to_imgs} 
+ex) python im2rec.py --list --resize 112 --recursive ./my_data ../dataset/ms1m_align_112_imgs
+```
+3. simple modification in code
+- use wandb instead of tensorboard
+- add a line, "if cfg['RANK'] % ngpus_per_node == 0:", when a multi processing error occurs
+- fix a few lines in 'dataset.py' as below:
+```
+- line 71: image_dir = line[0]--> image_dir = line[2]
+- line 74: image_dir, label = line[0], line[1] --> image_dir, label = line[2], line[1]
+- line 75: label = int(label) --> label = int(float(label))
+```
 
-The results are slightly different from the results in the paper because we replaced DataParallel with DistributedDataParallel and retrained the model.
+## train 
 
-## Citing this repository
-If you find this code useful in your research, please consider citing us:
+1. set path in "config.py"
+```
+- line 5: DATA_ROOT = '~/dataset/ms1m_align_112_imgs', # the parent root where your data are stored
+- line 6: RECORD_DIR = '~/CurricularFace/my_data.lst', # the dataset record dir
+```
+
+2. train
+```
+python scripts/train.py
+```
+
+## Contributors to this repository
+Yukyeong Lee | yukyeongleee@gmail.com  
+Wonjong Ryu | 1zong2@innerverz.com  
+
+## Reference
+[CurricularFace](https://github.com/HuangYG123/CurricularFace)
+
+## Citing CurricularFace
+If you find this code useful in your research, please consider citing the authors:
 ```
 @article{huang2020curricularface,
 	title={CurricularFace: Adaptive Curriculum Learning Loss for Deep Face Recognition},
@@ -49,11 +69,6 @@ If you find this code useful in your research, please consider citing us:
 	year={2020}
 }
 ```
-
-## Contacts
-If you have any questions about our work, please do not hesitate to contact us by emails.
-Yuge Huang: yugehuang@tencent.com
-Ying Tai: yingtai@tencent.com
 
 
 

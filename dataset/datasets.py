@@ -68,11 +68,14 @@ def read_samples_from_record(root_dir, record_dir, Train):
                 print('Error, Label is missing')
                 exit()
             elif len(line) == 1:
-                image_dir = line[0]
+                # image_dir = line[0]
+                image_dir = line[2]
                 label = 0
             else:
-                image_dir, label = line[0], line[1]
-            label = int(label)
+                # image_dir, label = line[0], line[1]
+                image_dir, label = line[2], line[1]
+            # label = int(label)
+            label = int(float(label))
             names.append(image_dir)
             image_dir = os.path.join(root_dir, image_dir)
             samples.append((image_dir, label))
