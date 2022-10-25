@@ -28,15 +28,6 @@ python scripts/grid.py
 python im2rec.py --list --resize 112 --recursive {prefix} {path_to_imgs} 
 ex) python im2rec.py --list --resize 112 --recursive ./my_data ../dataset/ms1m_align_112_imgs
 ```
-3. simple modification in code
-- use wandb instead of tensorboard
-- add a line, "if cfg['RANK'] % ngpus_per_node == 0:", when a multi processing error occurs
-- fix a few lines in 'dataset.py' as below:
-```
-- line 71: image_dir = line[0]--> image_dir = line[2]
-- line 74: image_dir, label = line[0], line[1] --> image_dir, label = line[2], line[1]
-- line 75: label = int(label) --> label = int(float(label))
-```
 
 ## train 
 
@@ -49,6 +40,17 @@ ex) python im2rec.py --list --resize 112 --recursive ./my_data ../dataset/ms1m_a
 2. train
 ```
 python scripts/train.py
+```
+
+- Note that we modified some lines in the original code as below.
+
+  - use wandb instead of tensorboard
+  - add a line, "if cfg['RANK'] % ngpus_per_node == 0:", when a multi processing error occurs
+  - fix a few lines in 'dataset.py' as below:
+```
+- line 71: image_dir = line[0]--> image_dir = line[2]
+- line 74: image_dir, label = line[0], line[1] --> image_dir, label = line[2], line[1]
+- line 75: label = int(label) --> label = int(float(label))
 ```
 
 ## Contributors to this repository
